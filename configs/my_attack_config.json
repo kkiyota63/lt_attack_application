@@ -1,0 +1,15 @@
+{
+  "search_mode": "lt-attack",
+  "norm_type": 2,
+  "num_point": 30,
+  "num_threads": 20,
+  "num_attack_per_point": 20,
+  "enable_early_return": true,
+  "model": "models/balanced_fraud_model.json",
+  "inputs": "data/fraud_test.libsvm",
+  "num_classes": 2,
+  "num_features": 21,
+  "feature_start": 0,
+  "adv_csv_path": "adversarial_examples.csv",
+  "mutable_features": ["income","has_other_cards","proposed_credit_limit","keep_alive_session"]
+}

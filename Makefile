@@ -1,5 +1,6 @@
 CC=g++
-COMMON_FLAGS = --std=c++17 -pthread -lboost_thread -lboost_system -lboost_filesystem
+COMMON_FLAGS = --std=c++17 -pthread -I/opt/homebrew/include
+LDFLAGS = -L/opt/homebrew/lib -lboost_thread -lboost_filesystem
 # DEBUG_CFLAGS = -g -D DEBUG $(COMMON_FLAGS)
 DEBUG_CFLAGS = -g $(COMMON_FLAGS)
 CFLAGS = -O2 $(COMMON_FLAGS)
@@ -20,13 +21,13 @@ debug: debug_lt_attack
 test: decision_forest_test
 
 decision_forest_test: $(OBJS) decision_forest_test.o
-	$(CC) -o $@ $^ $(CFLAGS)
+	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS)
 
 lt_attack: $(OBJS) lt_attack.o
-	$(CC) -o $@ $^ $(CFLAGS)
+	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS)
 
 debug_lt_attack: $(DEBUG_OBJS) debug_lt_attack.o
-	$(CC) -o $@ $^ $(DEBUG_CFLAGS)
+	$(CC) -o $@ $^ $(DEBUG_CFLAGS) $(LDFLAGS)
 
 clean:
 	rm -f *.o decision_forest_test lt_attack debug_lt_attack

@@ -1229,7 +1229,14 @@ void NeighborAttack::GetNeighborsWithinDistance(
     for (const auto& iter : box->Intervals()) {
       int feature_id = iter.first;
       const Interval& inter = iter.second;
-      if (!inter.Contains(starting_point[feature_id]))
+      
+      // Only modify mutable features
+      bool is_mutable = config_.mutable_feature_indices.empty() || 
+                       std::find(config_.mutable_feature_indices.begin(), 
+                                config_.mutable_feature_indices.end(), 
+                                feature_id) != config_.mutable_feature_indices.end();
+      
+      if (is_mutable && !inter.Contains(starting_point[feature_id]))
         alt_patch[feature_id] = inter.ClosestTo(starting_point[feature_id]);
     }
 
@@ -1294,8 +1301,24 @@ std::pair<bool, Point> NeighborAttack::NormalRandomPoint(int victim_label,
   int max_try = 300;
   while (max_try > 0) {
     --max_try;
+    
+    // Initialize with original point
     for (int i = 0; i < len; ++i) {
-      p[i] = ref_point[i] + distribution(generator);
+      p[i] = ref_point[i];
+    }
+    
+    // Only modify mutable features
+    if (!config_.mutable_feature_indices.empty()) {
+      for (int idx : config_.mutable_feature_indices) {
+        if (idx < len) {
+          p[idx] = ref_point[idx] + distribution(generator);
+        }
+      }
+    } else {
+      // No constraints - modify all features (original behavior)
+      for (int i = 0; i < len; ++i) {
+        p[i] = ref_point[i] + distribution(generator);
+      }
     }
 
     if (!HasSameLabel(forest_->PredictLabel(p), victim_label)) {
@@ -1328,10 +1351,26 @@ std::pair<bool, Point> NeighborAttack::FeatureSplitsRandomPoint(
   int max_try = 10000;
   while (max_try > 0) {
     --max_try;
+    
+    // Initialize with original point
     for (int i = 0; i < len; ++i) {
-      p[i] = feature_splits[i][distribution(generator) %
-                               feature_splits[i].size()] +
-             eps;
+      p[i] = ref_point[i];
+    }
+    
+    // Only modify mutable features
+    if (!config_.mutable_feature_indices.empty()) {
+      for (int idx : config_.mutable_feature_indices) {
+        if (idx < len && idx < feature_splits.size()) {
+          p[idx] = feature_splits[idx][distribution(generator) %
+                                       feature_splits[idx].size()] + eps;
+        }
+      }
+    } else {
+      // No constraints - modify all features (original behavior)
+      for (int i = 0; i < len; ++i) {
+        p[i] = feature_splits[i][distribution(generator) %
+                                 feature_splits[i].size()] + eps;
+      }
     }
 
     if (!HasSameLabel(forest_->PredictLabel(p), victim_label)) {

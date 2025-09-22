@@ -135,6 +135,16 @@ struct Config {
     milp_adv = GetOr<std::string>(config_json, "milp_adv", "");
     adv_training_path =
         GetOr<std::string>(config_json, "adv_training_path", "");
+    adv_csv_path =
+        GetOr<std::string>(config_json, "adv_csv_path", "");
+    
+    // Parse mutable features list
+    if (config_json.find("mutable_features") != config_json.end()) {
+      for (const auto& feature_name : config_json["mutable_features"]) {
+        mutable_feature_names.push_back(feature_name);
+      }
+    }
+    
     collect_histogram = GetOr(config_json, "collect_histogram", false);
     enable_relaxed_boundary =
         GetOr(config_json, "enable_relaxed_boundary", false);
@@ -162,6 +172,35 @@ struct Config {
       assert(false);
     }
 
+    // Convert feature names to indices
+    if (!mutable_feature_names.empty()) {
+      std::vector<std::string> feature_names = {
+        "income", "current_address_months_count", "customer_age", 
+        "zip_count_4w", "velocity_6h", "velocity_24h", "velocity_4w", 
+        "bank_branch_count_8w", "date_of_birth_distinct_emails_4w", 
+        "credit_risk_score", "phone_home_valid", "phone_mobile_valid", 
+        "has_other_cards", "proposed_credit_limit", "session_length_in_minutes", 
+        "keep_alive_session", "device_distinct_emails_8w", "month", 
+        "email_domain_fraud_rate", "country_fraud_rate", "limit_income_ratio"
+      };
+      
+      for (const auto& feature_name : mutable_feature_names) {
+        auto it = std::find(feature_names.begin(), feature_names.end(), feature_name);
+        if (it != feature_names.end()) {
+          int index = std::distance(feature_names.begin(), it);
+          mutable_feature_indices.push_back(index + feature_start);
+        } else {
+          cout << "Warning: Unknown feature name: " << feature_name << endl;
+        }
+      }
+      
+      cout << "Mutable features: ";
+      for (int idx : mutable_feature_indices) {
+        cout << idx << " ";
+      }
+      cout << endl;
+    }
+
     assert(norm_weight >= 0 && norm_weight <= 1);
     assert(binary_search_threshold >= 0 && binary_search_threshold <= 1);
     assert(norm_type == -1 || norm_type == 1 || norm_type == 2);
@@ -174,6 +213,9 @@ struct Config {
   std::string model_path;
   std::string milp_adv;
   std::string adv_training_path;
+  std::string adv_csv_path;
+  std::vector<std::string> mutable_feature_names;
+  std::vector<int> mutable_feature_indices;
   int offset;
   int num_point;
   int num_attack_per_point;

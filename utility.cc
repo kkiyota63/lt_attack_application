@@ -58,7 +58,7 @@ std::vector<std::pair<int, Point>> LoadSVMFile(const char* path,
     while (sscanf(s, "%d:%lf%n", &axis, &value, &pos) == 2) {
       assert(axis < p.Size());
       // assert(value >= 0 && value <= 1.0);
-      value = std::max(0.0, std::min(1.0, value));
+      // Removed clipping: value = std::max(0.0, std::min(1.0, value));
       p[axis] = value;
       s += pos;
     }

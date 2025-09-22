@@ -71,7 +71,9 @@ void BenchmarkDistortion(const Config& config) {
   }
 
   bool log_adv_training_examples = !config.adv_training_path.empty();
+  bool log_adv_csv = !config.adv_csv_path.empty();
   std::vector<std::pair<int, Point>> adv_training_examples;
+  std::vector<std::pair<Point, Point>> adv_csv_data; // original, adversarial
 
   Timing::Instance()->StartTimer("Total Time");
   auto start_timer = high_resolution_clock::now();
@@ -170,6 +172,11 @@ void BenchmarkDistortion(const Config& config) {
         adv_training_examples.push_back(std::make_pair(data.first, p));
       }
     }
+    
+    if (log_adv_csv) {
+      // Store the best adversarial example for each norm type along with labels
+      adv_csv_data.push_back(std::make_pair(data.second, result.best_points[config.norm_type]));
+    }
   }
 
   auto end_timer = high_resolution_clock::now();
@@ -184,6 +191,48 @@ void BenchmarkDistortion(const Config& config) {
       fprintf(fp, "%d %s\n", p.first, p.second.ToDebugString().c_str());
     }
     fclose(fp);
+  }
+  
+  if (log_adv_csv) {
+    FILE* fp;
+    fp = fopen(config.adv_csv_path.c_str(), "w");
+    
+    // Write CSV header (assuming same structure as original training data)
+    fprintf(fp, "type,fraud_bool,income,current_address_months_count,customer_age,zip_count_4w,velocity_6h,velocity_24h,velocity_4w,bank_branch_count_8w,date_of_birth_distinct_emails_4w,credit_risk_score,phone_home_valid,phone_mobile_valid,has_other_cards,proposed_credit_limit,session_length_in_minutes,keep_alive_session,device_distinct_emails_8w,month,email_domain_fraud_rate,country_fraud_rate,limit_income_ratio\n");
+    
+    for (const auto& pair : adv_csv_data) {
+      const Point& original = pair.first;
+      const Point& adversarial = pair.second;
+      
+      // Check if there are any changes between original and adversarial
+      bool has_changes = false;
+      for (int i = 0; i < original.Size(); ++i) {
+        if (abs(original[i] - adversarial[i]) > 1e-6) {
+          has_changes = true;
+          break;
+        }
+      }
+      
+      // Only output samples with actual feature changes
+      if (has_changes) {
+        // Write original point (fraud data, label 1)
+        fprintf(fp, "original,1");
+        for (int i = 0; i < original.Size(); ++i) {
+          fprintf(fp, ",%f", original[i]);
+        }
+        fprintf(fp, "\n");
+        
+        // Write adversarial point (normal prediction, label 0)
+        fprintf(fp, "adversarial,0");
+        for (int i = 0; i < adversarial.Size(); ++i) {
+          fprintf(fp, ",%f", adversarial[i]);
+        }
+        fprintf(fp, "\n");
+      }
+    }
+    
+    fclose(fp);
+    cout << "Adversarial examples saved to: " << config.adv_csv_path << endl;
   }
 
   if (verify_hamming) {

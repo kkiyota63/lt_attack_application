@@ -10,7 +10,7 @@ def train_balanced_model():
     """Train a balanced XGBoost model that can properly classify fraud samples"""
     
     # Load and prepare data
-    df = pd.read_csv("XGBoost/clean_data_sample_10percent.csv")
+    df = pd.read_csv("./clean_data_sample_10percent.csv")
     print(f"Original dataset shape: {df.shape}")
     
     # Extract features and labels
